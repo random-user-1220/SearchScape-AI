@@ -17,47 +17,68 @@ def image_url_to_text(image_url):
     # Preprocess the image and generate a caption
     inputs = processor(images=image, return_tensors="pt")
     out = model.generate(**inputs)
-    
+
     # Decode the generated caption
     caption = processor.decode(out[0], skip_special_tokens=True)
     return caption
 
-# Function to interact with SerpAPI and return web results
-def search_serpapi_web(query):
-    api_key = "797ae65a8687aa0cd78a4205d099f89af0f6ed00fd37cffca2693396c336a432"  # Replace with your actual SerpAPI key
-    url = "https://serpapi.com/search.json"
-    params = {
-        "q": query,
-        "api_key": api_key
-    }
-
-    response = requests.get(url, params=params)
-
-    if response.status_code == 200:
-        data = response.json()
-        web_results = data.get('organic_results', [])
-        # print("search output:" , web_results)
-        return web_results
-    else:
-        return None
-
-# Function to interact with SerpAPI and return image results
+# Updated function to interact with SerpAPI and return image and web results
 def search_serpapi_images(query):
-    api_key = "797ae65a8687aa0cd78a4205d099f89af0f6ed00fd37cffca2693396c336a432"  # Replace with your actual SerpAPI key
-    url = "https://serpapi.com/search.json"
+    SERPAPI_KEY = "797ae65a8687aa0cd78a4205d099f89af0f6ed00fd37cffca2693396c336a432"  # Replace with your actual SerpAPI key
+    url = "https://serpapi.com/search"
+
+    # Parameters for DuckDuckGo search query
     params = {
-        "q": query,
-        "tbm": "isch",  # Image search mode
-        "api_key": api_key
+                "engine": "duckduckgo",  # Use DuckDuckGo as the search engine
+        "q": query,  # Replace with your search query
+        "num": 10,  # Number of results to return (for websites)
+        "tbm": "isch",  # Use "isch" to get image search results
+        "api_key": SERPAPI_KEY  # Your SerpAPI key
     }
 
-    response = requests.get(url, params=params)
+    try:
+        # Send the GET request to SerpAPI
+        response = requests.get(url, params=params)
 
-    if response.status_code == 200:
-        data = response.json()
-        image_results = data.get('images_results', [])
-        return image_results
-    else:
+        # Check for a successful response
+        if response.status_code == 200:
+            # Parse the JSON response
+            data = response.json()
+
+            # Extract and limit image results to 10
+            image_results = data.get('inline_images', [])[:10]
+            image_urls = []
+
+            if image_results:
+                print("Image Search Results:")
+                for idx, result in enumerate(image_results):
+                    print(f"\nImage Result {idx + 1}")
+                    print(f"Image URL: {result.get('thumbnail')}")
+                    image_urls.append(result.get('thumbnail'))
+            else:
+                print("No images found.")
+
+            # Extract and limit web results to 10
+            web_results = data.get('organic_results', [])[:10]
+            web_urls = []
+
+            if web_results:
+                print("\nWebsite Search Results:")
+                for idx, result in enumerate(web_results):
+                    print(f"\nWebsite Result {idx + 1}")
+                    print(f"Website URL: {result.get('link')}")
+                    web_urls.append(result.get('link'))
+            else:
+                print("No websites found.")
+
+            return {"images": image_urls, "websites": web_urls}
+
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+            return None
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
         return None
 
 # Streamlit app with enhanced UI
@@ -93,7 +114,7 @@ def main():
     st.sidebar.markdown("""
         <div style="padding: 10px; text-align: center;">
             <p style="color: #003366; font-weight: bold;">🌐 Searching has never been easier!</p>
-            <p style="color: #003366; font-size: 16px; font-weight: bold;">Enter your prompt, sit back, and explore the web like never before!</p>  <!-- Updated text color to dark blue -->
+            <p style="color: #003366; font-size: 16px; font-weight: bold;">Enter your prompt, sit back, and explore the web like never before!</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -135,17 +156,15 @@ def main():
         <div class="center-btn">
         """
 
-        # Check current mode and change button accordingly
+        # Toggle search mode directly with a single click
         if st.session_state.search_mode == 'web':
             if st.button("Generate Websites"):
                 st.session_state.search_mode = 'images'  # Switch to image search after web results
                 st.markdown("<h2 style='text-align: center; color: darkblue;'>Web Results</h2>", unsafe_allow_html=True)
-                # print("query: ",combined_query)
-                web_results = search_serpapi_web(combined_query)
+                web_results = search_serpapi_images(combined_query)
                 if web_results:
-                    for result in web_results:
-                        st.markdown(f"**[{result.get('title')}]({result.get('link')})**")
-                        st.markdown(f"<p style='font-size: 16px;'>{result.get('snippet', 'No description available')}</p>", unsafe_allow_html=True)
+                    for result in web_results.get('websites', []):
+                        st.markdown(f"**[{result}]**")
                         st.markdown("---")
                 else:
                     st.error("No web results found.")
@@ -155,9 +174,8 @@ def main():
                 st.markdown("<h2 style='text-align: center; color: darkblue;'>Image Results</h2>", unsafe_allow_html=True)
                 image_results = search_serpapi_images(combined_query)
                 if image_results:
-                    for image in image_results[:5]:  # Display first 5 images
-                        image_url = image.get('thumbnail')
-                        st.image(image_url, caption=f"Image from {image.get('source')}", use_column_width=True)
+                    for image_url in image_results.get('images', []):
+                        st.image(image_url, caption="Search Result", use_column_width=True)
                 else:
                     st.warning("No image results found.")
 
