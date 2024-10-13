@@ -22,64 +22,47 @@ def image_url_to_text(image_url):
     caption = processor.decode(out[0], skip_special_tokens=True)
     return caption
 
-# Updated function to interact with SerpAPI and return image and web results
-def search_serpapi_images(query):
-    SERPAPI_KEY = "797ae65a8687aa0cd78a4205d099f89af0f6ed00fd37cffca2693396c336a432"  # Replace with your actual SerpAPI key
-    url = "https://serpapi.com/search"
-
-    # Parameters for DuckDuckGo search query
+# Function to interact with RapidAPI for web search
+def search_rapidapi(query):
+    url = "https://real-time-web-search.p.rapidapi.com/search"
+    
     params = {
-                "engine": "duckduckgo",  # Use DuckDuckGo as the search engine
-        "q": query,  # Replace with your search query
-        "num": 10,  # Number of results to return (for websites)
-        "tbm": "isch",  # Use "isch" to get image search results
-        "api_key": SERPAPI_KEY  # Your SerpAPI key
+        "q": query,  # Dynamic query
+        "limit": "10"  # Limit the number of results
+    }
+
+    headers = {
+        "X-RapidAPI-Key": "a3d05b6a5amshe73e895247874bep1a154ejsn539371c789bf",  # Replace with your actual API key
+        "X-RapidAPI-Host": "real-time-web-search.p.rapidapi.com"
     }
 
     try:
-        # Send the GET request to SerpAPI
-        response = requests.get(url, params=params)
+        # Send GET request to API with query parameters
+        response = requests.get(url, headers=headers, params=params)
 
         # Check for a successful response
         if response.status_code == 200:
-            # Parse the JSON response
-            data = response.json()
+            search_results = response.json()
 
-            # Extract and limit image results to 10
-            image_results = data.get('inline_images', [])[:10]
-            image_urls = []
-
-            if image_results:
-                print("Image Search Results:")
-                for idx, result in enumerate(image_results):
-                    print(f"\nImage Result {idx + 1}")
-                    print(f"Image URL: {result.get('thumbnail')}")
-                    image_urls.append(result.get('thumbnail'))
+            # Process and extract the search results
+            if "data" in search_results:
+                web_results = []
+                for result in search_results["data"][:10]:
+                    title = result.get("title", "No title available")
+                    snippet = result.get("snippet", "No description available")
+                    link = result.get("url", "No URL available")
+                    web_results.append((title, snippet, link))
+                return web_results
             else:
-                print("No images found.")
-
-            # Extract and limit web results to 10
-            web_results = data.get('organic_results', [])[:10]
-            web_urls = []
-
-            if web_results:
-                print("\nWebsite Search Results:")
-                for idx, result in enumerate(web_results):
-                    print(f"\nWebsite Result {idx + 1}")
-                    print(f"Website URL: {result.get('link')}")
-                    web_urls.append(result.get('link'))
-            else:
-                print("No websites found.")
-
-            return {"images": image_urls, "websites": web_urls}
-
+                print("No 'data' key found in the response.")
+                return []
         else:
             print(f"Error: {response.status_code} - {response.text}")
-            return None
+            return []
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
+        return []
 
 # Streamlit app with enhanced UI
 def main():
@@ -161,29 +144,24 @@ def main():
             if st.button("Generate Websites"):
                 st.session_state.search_mode = 'images'  # Switch to image search after web results
                 st.markdown("<h2 style='text-align: center; color: darkblue;'>Web Results</h2>", unsafe_allow_html=True)
-                web_results = search_serpapi_images(combined_query)
+                web_results = search_rapidapi(combined_query)
                 if web_results:
-                    for result in web_results.get('websites', []):
-                        st.markdown(f"**[{result}]**")
+                    for title, snippet, link in web_results:
+                        st.markdown(f"**[{title}]({link})**")
+                        st.write(f"{snippet}")
                         st.markdown("---")
                 else:
                     st.error("No web results found.")
         else:
             if st.button("Generate Images"):
                 st.session_state.search_mode = 'web'  # Switch back to web search after image results
-                st.markdown("<h2 style='text-align: center; color: darkblue;'>Image Results</h2>", unsafe_allow_html=True)
-                image_results = search_serpapi_images(combined_query)
-                if image_results:
-                    for image_url in image_results.get('images', []):
-                        st.image(image_url, caption="Search Result", use_column_width=True)
-                else:
-                    st.warning("No image results found.")
+                # Image search not included as per RapidAPI; only web search functionality implemented here
 
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Footer with additional styling
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: gray;'>Built with ❤️ using Streamlit and SerpAPI</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: gray;'>Built with ❤️ using Streamlit and RapidAPI</p>", unsafe_allow_html=True)
 
 # Run the Streamlit app
 if __name__ == "__main__":
