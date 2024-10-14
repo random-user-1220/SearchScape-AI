@@ -1,6 +1,6 @@
-# Google Lens Pro Max: Enhanced Web & Image Search
+# SearchScape AI: Enhanced Web & Image Search
 
-**GOOGLE LENS PRO MAX** is a Streamlit-based web application that combines the power of image captioning and web search capabilities to help users explore the web like never before. By uploading an image or entering a search prompt, the application generates relevant captions for images and uses them to perform both web and image searches.
+**SearchScape AI** is a Streamlit-based web application that combines the power of image captioning and web search capabilities to help users explore the web like never before. By uploading an image or entering a search prompt, the application generates relevant captions for images and uses them to perform both web and image searches.
 
 ---
 
@@ -19,7 +19,7 @@ The following technologies and libraries are used in this project:
 - **Streamlit**: A fast, easy-to-use framework for building interactive web applications with Python.
 - **Transformers**: Hugging Face’s library for state-of-the-art natural language processing (NLP) models, used here for the BLIP model to generate captions from images.
 - **Torch**: PyTorch is used to run the deep learning models (BLIP in this case).
-- **DuckDuckGo API**: Provides web and image search capabilities.
+- **DuckDuckGo API (From RapidApi)**: Provides web and image search capabilities.
 - **Pillow (PIL)**: Python Imaging Library for handling image processing tasks such as resizing, cropping, etc.
 - **Requests**: For making HTTP requests to external APIs like DuckDuckGo.
 

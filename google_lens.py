@@ -73,7 +73,7 @@ def main():
     # App title with enhanced styling
     st.markdown("""
         <div style="background-color: #3f72af; padding: 20px; border-radius: 10px;">
-            <h1 style='text-align: center; color: white;'>GOOGLE LENS PRO MAX</h1>
+            <h1 style='text-align: center; color: white;'>SearchScape AI</h1>
         </div>
         """, unsafe_allow_html=True)
 
