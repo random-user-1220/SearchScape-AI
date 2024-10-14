@@ -8,12 +8,8 @@ from io import BytesIO
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-# Function to generate caption from image URL
-def image_url_to_text(image_url):
-    # Fetch the image from the URL
-    response = requests.get(image_url)
-    image = PILImage.open(BytesIO(response.content)).convert("RGB")
-
+# Function to generate caption from image
+def image_to_text(image):
     # Preprocess the image and generate a caption
     inputs = processor(images=image, return_tensors="pt")
     out = model.generate(**inputs)
@@ -29,10 +25,7 @@ def search_duckduckgo(query):
         "x-rapidapi-host": "duckduckgo8.p.rapidapi.com",
         "x-rapidapi-key": "a90b889914msh1eaee86181b76bfp1ec035jsn04dbb53f7d2f",  # Replace with your actual API key
     }
-    params = {
-        "q": query,
-        "format": "json"
-    }
+    params = {"q": query, "format": "json"}
 
     response = requests.get(url, headers=headers, params=params)
     
@@ -50,17 +43,12 @@ def search_duckduckgo_images(query):
         "x-rapidapi-host": "duckduckgo-image-search.p.rapidapi.com",
         "x-rapidapi-key": "a90b889914msh1eaee86181b76bfp1ec035jsn04dbb53f7d2f",  # Replace with your actual API key
     }
-    params = {
-        "q": query,
-        "format": "json",
-        "max_results": 10  # This limits the number of results to 10
-    }
+    params = {"q": query, "format": "json", "max_results": 10}
 
     response = requests.get(url, headers=headers, params=params)
     
     if response.status_code == 200:
         results = response.json()
-        # Explicitly limit the results to 10, in case the API returns more than that
         return results.get('results', [])[:10]  # Limit to first 10 results
     else:
         print(f"Error: {response.status_code} - {response.text}")
@@ -91,7 +79,11 @@ def main():
 
     # Sidebar for user inputs
     st.sidebar.markdown("## Enter Details")
+    
+    # Option to enter an image URL or upload a file
     image_url = st.sidebar.text_input("Enter the image URL:")
+    uploaded_file = st.sidebar.file_uploader("Or upload an image:", type=["png", "jpg", "jpeg"])
+
     user_prompt = st.sidebar.text_input("Enter your search prompt:")
 
     # Sidebar with a message
@@ -105,22 +97,35 @@ def main():
     # Display the main content in columns
     col1, col2 = st.columns([1, 2])
 
-    if image_url and user_prompt:
+    image = None
+    if image_url:
+        # Fetch the image from the URL
+        response = requests.get(image_url)
+        image = PILImage.open(BytesIO(response.content)).convert("RGB")
+
+    if uploaded_file:
+        # Load the uploaded image
+        image = PILImage.open(uploaded_file).convert("RGB")
+
+    if image and user_prompt:
         with col1:
             st.markdown("### Input Image")
-            st.image(image_url, caption="Image from URL", use_column_width=True)
+            st.image(image, caption="Uploaded Image", use_column_width=True)
 
         with col2:
             # Generate caption from the image
-            caption = image_url_to_text(image_url)
+            caption = image_to_text(image)
             st.markdown("<h3 style='color: darkgreen;'>Generated Caption:</h3>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 18px;'>{caption}</p>", unsafe_allow_html=True)
 
             # Combine user prompt with the generated caption
-            combined_query = f"{user_prompt} ,given an image of  {caption}"
+            if "show me" not in user_prompt.lower() and "give me" not in user_prompt.lower():
+             # Add the "show me" part if it's not present in sentence2
+                user_prompt = f"show me {user_prompt.lower()}"
+            combined_query = f"{user_prompt}, given an image of {caption}"
             st.markdown("<h3 style='color: darkgreen;'>Combined Search Query:</h3>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 18px;'>{combined_query}</p>", unsafe_allow_html=True)
-            query=f"{user_prompt},context= {caption}"
+
         # Horizontal line separator
         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -142,7 +147,7 @@ def main():
         # Perform image search
         if st.button("Generate Image Results"):
             st.markdown("<h2 style='text-align: center; color: darkblue;'>Image Results</h2>", unsafe_allow_html=True)
-            image_results = search_duckduckgo_images(query)
+            image_results = search_duckduckgo_images(combined_query)
             if image_results:
                 for image in image_results:
                     title = image.get('title', 'No title available')
