@@ -125,7 +125,7 @@ def main():
             combined_query = f"{user_prompt}, given an image of {caption}"
             st.markdown("<h3 style='color: darkgreen;'>Combined Search Query:</h3>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 18px;'>{combined_query}</p>", unsafe_allow_html=True)
-
+            query=f"{user_prompt},context={caption}"
         # Horizontal line separator
         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -147,7 +147,7 @@ def main():
         # Perform image search
         if st.button("Generate Image Results"):
             st.markdown("<h2 style='text-align: center; color: darkblue;'>Image Results</h2>", unsafe_allow_html=True)
-            image_results = search_duckduckgo_images(combined_query)
+            image_results = search_duckduckgo_images(query)
             if image_results:
                 for image in image_results:
                     title = image.get('title', 'No title available')
